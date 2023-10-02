@@ -65,7 +65,7 @@ class TileParser:
             return "plain"
         elif blue > 120 and green > 73 and red < 56:
             return "lake"
-        elif blue < 40 and green < 70 and red < 57:
+        elif blue < 40 and green < 70 and red < 62:
             return "forest"
         elif blue < 10 and green > 120 and red > 120:
             return "wheat_field"
