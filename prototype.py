@@ -3,7 +3,7 @@ import cv2 as cv
 
 class BoardChecker:
     def __init__(self):
-        path = "dat/cropped/2.jpg"
+        path = "dat/cropped/1.jpg"
         img = cv.imread(path)
 
         # Prevent annoying issues with None images
