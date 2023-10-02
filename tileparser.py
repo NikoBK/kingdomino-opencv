@@ -14,7 +14,7 @@ class Tile:
         self.average_color = [0,0,0] # RGB
         self.x = 0
         self.y = 0
-        self.has_crown = False
+        self.crowns = 0
         self.terrain = "None"
         self.is_spawn = False
 
