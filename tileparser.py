@@ -62,13 +62,14 @@ class TileParser:
         # Check tile colors
         if blue > 18 and green > 139 and red > 96:
         # if red > 28 and green > 148 and blue > 96:
-            return "plains"
+            return "plain"
         elif blue > 120 and green > 73 and red < 56:
-            return "ocean"
+            return "lake"
         elif blue < 40 and green < 70 and red < 57:
             return "forest"
+        elif blue < 10 and green > 120 and red > 120:
+            return "wheat_field"
+        elif blue > 20 and green > 111 and red > 95:
+            return "village"
         else:
             return "None"
-
-
-
