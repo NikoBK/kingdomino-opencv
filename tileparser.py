@@ -51,6 +51,7 @@ class TileParser:
                     tile.average_color[1], # Green
                     tile.average_color[2]  # Blue
                 ]
+                self.tiles.append(tile)
         return color_map_matrix
 
     def get_hsv_thresholds(self, img, terrain):
