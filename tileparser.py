@@ -41,7 +41,7 @@ class TileParser:
                 avg_color_row = np.average(tile.img, axis=0)
                 avg_color = np.average(avg_color_row, axis=0)
                 tile.average_color = avg_color
-                
+
                 print(f"tile ({tile.x},{tile.y})'s average color (BGR) is: {tile.average_color}")
                 # print(f"tile ({tile.x},{tile.y})'s average color (HSV) is: {average_hsv}")
 
@@ -52,3 +52,61 @@ class TileParser:
                     tile.average_color[2]  # Blue
                 ]
         return color_map_matrix
+
+    def get_hsv_thresholds(self, img, terrain):
+        match terrain:
+            case "forest":
+                lower = np.array([30, 0, 0])
+                upper = np.array([45,185, 100])
+            case "lake":
+                lower = np.array([95, 100, 100])
+                upper = np.array([120, 255, 255])
+            case "plains":
+                lower = np.array([30, 80, 80])
+                upper = np.array([95, 255, 255])
+            case "spawn_yellow":
+                lower = np.array([25,0,0])
+                upper = np.array([35,140, 140])
+            case "spawn_red":
+                lower = np.array([0,0,0])
+                upper = np.array([0,0,0])
+            case "spawn_blue":
+                lower = np.array([0,0,0])
+                upper = np.array([0,0,0])
+            case "spawn_green":
+                lower = np.array([0,0,0])
+                upper = np.array([0,0,0])
+            case "wasteland":
+                lower = np.array([0,0,0])
+                upper = np.array([25,255,255])
+            case "wheat_field":
+                lower = np.array([25,120,120])
+                upper = np.array([35,255, 255])
+            case "mines":
+                lower = np.array([0,0,0])
+                upper = np.array([0,0,0])
+            case _:
+                lower = np.array([0,0,0])
+                upper = np.array([0,0,0])
+                print(f"Could not find terrain handler: {terrain}")
+        
+        mask = cv.inRange(img, lower, upper)
+        return mask
+
+    def find_contours(self, img):
+        terrains_old = [ "forest", "lake", "plains",
+                     "spawn_yellow", "spawn_red", "spawn_blue",
+                     "spawn_green", "wasteland", "wheat_field", "mines" ]
+        terrains = [ "wheat_field" ]
+        all_contours = []
+        hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+        
+        for terrain in terrains:
+            hsv_mask = self.get_hsv_thresholds(hsv_img, terrain)
+            kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5,5))
+            mask = cv.morphologyEx(hsv_mask, cv.MORPH_OPEN, kernel)
+            contours, _ = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+            for contour in contours:
+                all_contours.append(contour)
+        
+        return all_contours
