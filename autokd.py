@@ -11,6 +11,7 @@ Authors:
 from tileparser import TileParser
 import numpy as np
 import cv2 as cv
+import random
 
 class AutoKD:
     def __init__(self):
@@ -21,7 +22,7 @@ class AutoKD:
 
     # Start the automatic score evaluation.
     def start(self):
-        path = f"{self.cropped_path}1.jpg"
+        path = f"{self.cropped_path}2.jpg"
         space = np.zeros([500, 300, 3], np.uint8)
         img = cv.imread(path) # TODO: This should be recursive
         if img is None:
@@ -33,7 +34,8 @@ class AutoKD:
         cv.imwrite(f"./average_color_map_{path}.jpg", color_map)
         contours = self.tileparser.find_contours(color_map)
         print(f"TOTAL CONTOUR COUNT: {len(contours)}")
-        cv.drawContours(img, contours, -1, (0,0,255), 3)
+        for i in range(len(contours)):
+            cv.drawContours(img, contours, i, (random.randint(0, 112), 0, random.randint(112, 255)), 3)
 
         win_title = "Input Image | Average Color Map"
         cv.imshow(win_title, np.hstack([img, space, color_map]))

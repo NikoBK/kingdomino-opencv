@@ -75,11 +75,11 @@ class TileParser:
                 lower = np.array([0, 0, 0])
                 upper = np.array([100, 120, 200])
             case "spawn_green":
-                lower = np.array([20, 80, 80])
-                upper = np.array([70, 120, 120])
+                lower = np.array([32, 80, 95])
+                upper = np.array([70, 95, 110])
             case "wasteland":
-                lower = np.array([0, 0, 80])
-                upper = np.array([50, 170, 150])
+                lower = np.array([0, 80, 80])
+                upper = np.array([70, 150, 120])
             case "wheat_field":
                 lower = np.array([25, 120, 120])
                 upper = np.array([30, 255, 255])
@@ -97,8 +97,8 @@ class TileParser:
     def find_contours(self, img):
         terrains_old = [ "forest", "lake", "plains",
                      "spawn_yellow", "spawn_red", "spawn_blue",
-                     "spawn_green", "wasteland", "wheat_field", "mines" ]
-        terrains = [ "spawn_yellow" ]
+                     "spawn_green", "wasteland", "wheat_field", "mine" ]
+        terrains = [ "spawn_green" ]
         all_contours = []
         hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
         
