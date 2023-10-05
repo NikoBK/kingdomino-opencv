@@ -22,7 +22,7 @@ class AutoKD:
 
     # Start the automatic score evaluation.
     def start(self):
-        path = f"{self.cropped_path}2.jpg"
+        path = f"{self.cropped_path}20.jpg"
         space = np.zeros([500, 300, 3], np.uint8)
         img = cv.imread(path) # TODO: This should be recursive
         if img is None:

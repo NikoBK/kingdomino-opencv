@@ -57,8 +57,8 @@ class TileParser:
     def get_hsv_thresholds(self, img, terrain):
         match terrain:
             case "forest":
-                lower = np.array([30, 0, 0])
-                upper = np.array([45, 185, 100])
+                lower = np.array([30, 80, 0])
+                upper = np.array([65, 200, 74])
             case "lake":
                 lower = np.array([95, 50, 50])
                 upper = np.array([120, 255, 255])
@@ -72,14 +72,14 @@ class TileParser:
                 lower = np.array([0, 40, 90])
                 upper = np.array([25, 80, 120])
             case "spawn_blue":
-                lower = np.array([0, 0, 0])
-                upper = np.array([100, 120, 200])
+                lower = np.array([60, 10, 50])
+                upper = np.array([90, 20, 110])
             case "spawn_green":
-                lower = np.array([32, 80, 95])
+                lower = np.array([32, 40, 50])
                 upper = np.array([70, 95, 110])
             case "wasteland":
                 lower = np.array([0, 80, 80])
-                upper = np.array([70, 150, 120])
+                upper = np.array([70, 170, 130])
             case "wheat_field":
                 lower = np.array([25, 120, 120])
                 upper = np.array([30, 255, 255])
@@ -98,7 +98,7 @@ class TileParser:
         terrains_old = [ "forest", "lake", "plains",
                      "spawn_yellow", "spawn_red", "spawn_blue",
                      "spawn_green", "wasteland", "wheat_field", "mine" ]
-        terrains = [ "spawn_green" ]
+        terrains = [ "forest" ]
         all_contours = []
         hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
         
