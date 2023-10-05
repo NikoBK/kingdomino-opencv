@@ -54,6 +54,12 @@ class TileParser:
                 self.tiles.append(tile)
         return color_map_matrix
 
+    # NOTE: I am somewhat conflicted about whether
+    # or not this is even possible. The images varie so much
+    # in blur, perspective angle, and etc. That seemingly the
+    # best color contours opencv code wont solve edge cases like
+    # castle start piece bricks that overlap other tiles...
+    # TODO: Is the grass fire algorithm a better choice?
     def get_hsv_thresholds(self, img, terrain):
         match terrain:
             case "forest":
@@ -95,10 +101,10 @@ class TileParser:
         return mask
 
     def find_contours(self, img):
-        terrains_old = [ "forest", "lake", "plains",
+        terrains = [ "forest", "lake", "plains",
                      "spawn_yellow", "spawn_red", "spawn_blue",
                      "spawn_green", "wasteland", "wheat_field", "mine" ]
-        terrains = [ "forest" ]
+        terrains_test = [ "forest" ]
         all_contours = []
         hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
         
