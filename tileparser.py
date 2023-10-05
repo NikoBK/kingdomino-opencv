@@ -59,7 +59,7 @@ class TileParser:
                 lower = np.array([30, 0, 0])
                 upper = np.array([45,185, 100])
             case "lake":
-                lower = np.array([95, 100, 100])
+                lower = np.array([95, 50, 50])
                 upper = np.array([120, 255, 255])
             case "plains":
                 lower = np.array([30, 80, 80])
@@ -68,23 +68,23 @@ class TileParser:
                 lower = np.array([25,0,0])
                 upper = np.array([35,140, 140])
             case "spawn_red":
-                lower = np.array([0,0,0])
-                upper = np.array([0,0,0])
+                lower = np.array([0,40,90])
+                upper = np.array([25,80,120])
             case "spawn_blue":
                 lower = np.array([0,0,0])
-                upper = np.array([0,0,0])
+                upper = np.array([100,120,200])
             case "spawn_green":
-                lower = np.array([0,0,0])
-                upper = np.array([0,0,0])
+                lower = np.array([20,80,80])
+                upper = np.array([70,120,120])
             case "wasteland":
-                lower = np.array([0,0,0])
-                upper = np.array([25,255,255])
+                lower = np.array([0,0,80])
+                upper = np.array([50,170,150])
             case "wheat_field":
                 lower = np.array([25,120,120])
-                upper = np.array([35,255, 255])
-            case "mines":
-                lower = np.array([0,0,0])
-                upper = np.array([0,0,0])
+                upper = np.array([30,255, 255])
+            case "mine":
+                lower = np.array([0,110,50])
+                upper = np.array([28,180,80])
             case _:
                 lower = np.array([0,0,0])
                 upper = np.array([0,0,0])
@@ -97,7 +97,7 @@ class TileParser:
         terrains_old = [ "forest", "lake", "plains",
                      "spawn_yellow", "spawn_red", "spawn_blue",
                      "spawn_green", "wasteland", "wheat_field", "mines" ]
-        terrains = [ "wheat_field" ]
+        terrains = [ "spawn_green" ]
         all_contours = []
         hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
         

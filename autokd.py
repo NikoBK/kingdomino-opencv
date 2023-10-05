@@ -21,7 +21,7 @@ class AutoKD:
 
     # Start the automatic score evaluation.
     def start(self):
-        path = f"{self.cropped_path}/1.jpg"
+        path = f"{self.cropped_path}5.jpg"
         space = np.zeros([500, 300, 3], np.uint8)
         img = cv.imread(path) # TODO: This should be recursive
         if img is None:
@@ -32,7 +32,7 @@ class AutoKD:
         color_map = self.image_resize(tiles_color_map, height=500)
         cv.imwrite(f"./average_color_map_{path}.jpg", color_map)
         contours = self.tileparser.find_contours(color_map)
-        print(f"contours: {len(contours)}")
+        print(f"TOTAL CONTOUR COUNT: {len(contours)}")
         cv.drawContours(img, contours, -1, (0,0,255), 3)
 
         win_title = "Input Image | Average Color Map"
