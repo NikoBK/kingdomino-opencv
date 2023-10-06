@@ -101,10 +101,10 @@ class TileParser:
         return mask
 
     def find_contours(self, img):
-        terrains = [ "forest", "lake", "plains",
+        terrains_old = [ "forest", "lake", "plains",
                      "spawn_yellow", "spawn_red", "spawn_blue",
                      "spawn_green", "wasteland", "wheat_field", "mine" ]
-        terrains_test = [ "forest" ]
+        terrains = [ "mine" ]
         all_contours = []
         hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
         
