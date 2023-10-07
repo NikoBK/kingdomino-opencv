@@ -12,6 +12,7 @@ class Tile:
     def __init__(self):
         self.img = None # Image of the tile (contains all pixels)
         self.average_color = [0,0,0] # RGB
+        self.dominant_color = [0,0,0]
         self.x = 0
         self.y = 0
         self.crowns = 0
@@ -23,6 +24,13 @@ class Tile:
         self.y = int(y * 0.01)
 
 class TileParser:
+    forest_tiles = 0
+    field_tiles = 0
+    water_tiles = 0
+    mine_tiles = 0
+    waste_tiles = 0
+    misc_tiles = 0
+
     def __init__(self):
         self.tile_size = 100 # Pixels
         self.tiles = []
@@ -38,19 +46,37 @@ class TileParser:
                 tile.set_pos(x, y)
                 tile.img = img[y:y + self.tile_size, x:x + self.tile_size,:]
 
-                avg_color_row = np.average(tile.img, axis=0)
-                avg_color = np.average(avg_color_row, axis=0)
+                #avg_color_row = np.average(tile.img, axis=0)
+                #avg_color = np.average(avg_color_row, axis=0)
+                avg_color = tile.img.mean(axis=0).mean(axis=0)
                 tile.average_color = avg_color
 
-                print(f"tile ({tile.x},{tile.y})'s average color (BGR) is: {tile.average_color}")
-                # print(f"tile ({tile.x},{tile.y})'s average color (HSV) is: {average_hsv}")
+                # Get the dominant color (BRG)
+                pixels = np.float32(tile.img.reshape(-1, 3))
+                n_colors = 5
+                criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 200, .1)
+                flags = cv.KMEANS_RANDOM_CENTERS
+                _, labels, palette = cv.kmeans(pixels, n_colors, None, criteria, 10, flags)
+                _, counts = np.unique(labels, return_counts=True)
+                dominant = palette[np.argmax(counts)]
+                tile.dominant_color = dominant
+                # print(f"tile: ({tile.x},{tile.y})'s dominant colors are: {palette}")
 
-                # Only used for debugging.
-                color_map_matrix[tile.y, tile.x] = [
-                    tile.average_color[0], # Red
-                    tile.average_color[1], # Green
-                    tile.average_color[2]  # Blue
-                ]
+                use_dominant = True
+                if use_dominant:
+                    # Only used for debugging.
+                    color_map_matrix[tile.y, tile.x] = [
+                        tile.dominant_color[0], # Red
+                        tile.dominant_color[1], # Green
+                        tile.dominant_color[2]  # Blue
+                    ]
+                else:
+                    # Only used for debugging.
+                    color_map_matrix[tile.y, tile.x] = [
+                        tile.average_color[0], # Red
+                        tile.average_color[1], # Green
+                        tile.average_color[2]  # Blue
+                    ]
                 self.tiles.append(tile)
         return color_map_matrix
 
@@ -63,8 +89,8 @@ class TileParser:
     def get_hsv_thresholds(self, img, terrain):
         match terrain:
             case "forest":
-                lower = np.array([30, 80, 0])
-                upper = np.array([65, 200, 74])
+                lower = np.array([30, 50, 0])
+                upper = np.array([75, 255, 125])
             case "lake":
                 lower = np.array([95, 50, 50])
                 upper = np.array([120, 255, 255])
@@ -84,14 +110,14 @@ class TileParser:
                 lower = np.array([32, 40, 50])
                 upper = np.array([70, 95, 110])
             case "wasteland":
-                lower = np.array([0, 80, 80])
-                upper = np.array([70, 170, 130])
+                lower = np.array([0, 20, 80])
+                upper = np.array([70, 170, 150])
             case "wheat_field":
                 lower = np.array([25, 120, 120])
                 upper = np.array([30, 255, 255])
             case "mine":
-                lower = np.array([0, 110, 50])
-                upper = np.array([28, 180, 80])
+                 lower = np.array([0, 0, 0])
+                 upper = np.array([28, 180, 80])
             case _:
                 lower = np.array([0, 0, 0])
                 upper = np.array([0, 0, 0])
@@ -101,10 +127,9 @@ class TileParser:
         return mask
 
     def find_contours(self, img):
-        terrains_old = [ "forest", "lake", "plains",
-                     "spawn_yellow", "spawn_red", "spawn_blue",
-                     "spawn_green", "wasteland", "wheat_field", "mine" ]
-        terrains = [ "mine" ]
+        terrains = [ "forest", "lake", "plains",
+                     "wasteland", "wheat_field", "mine" ]
+        terrains_test = [ "forest" ]
         all_contours = []
         hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
         
