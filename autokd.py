@@ -23,7 +23,7 @@ class AutoKD:
     # Start the automatic score evaluation.
     def start(self):
         # sussy baka images:
-        # 6 11 12 13 14 16 
+        # 11 12 14 16 
         path = f"{self.cropped_path}27.jpg"
         space = np.zeros([500, 300, 3], np.uint8)
         img = cv.imread(path) # TODO: This should be recursive
