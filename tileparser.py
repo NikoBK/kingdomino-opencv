@@ -213,7 +213,6 @@ class TileParser:
     def grassfire_algorithm(self, img, coords, index, intensity):
         x,y = coords
         burn_queue = []
-
         if img[y,x] == intensity:
             burn_queue.append((y,x))
         else:
