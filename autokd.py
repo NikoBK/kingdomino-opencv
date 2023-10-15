@@ -34,10 +34,11 @@ class AutoKD:
         tiles_color_map = self.tileparser.parse_tiles(img)
         color_map = self.image_resize(tiles_color_map, height=500)
         cv.imwrite(f"./average_color_map_{path}.jpg", color_map)
-        contours = self.tileparser.find_contours(color_map)
-        print(f"TOTAL CONTOUR COUNT: {len(contours)}")
-        for i in range(len(contours)):
-            cv.drawContours(img, contours, i, (random.randint(0, 112), 0, random.randint(112, 255)), 3)
+        self.tileparser.test_score(color_map)
+        #contours = self.tileparser.find_contours(color_map)
+        #print(f"TOTAL CONTOUR COUNT: {len(contours)}")
+        #for i in range(len(contours)):
+        #    cv.drawContours(img, contours, i, (random.randint(0, 112), 0, random.randint(112, 255)), 3)
 
         win_title = "Input Image | Average Color Map"
         cv.imshow(win_title, np.hstack([img, space, color_map]))

@@ -78,6 +78,8 @@ class TileParser:
                         tile.average_color[2]  # Blue
                     ]
                 self.tiles.append(tile)
+        for tile in self.tiles:
+            print(f"saved tile at: {tile.x}, {tile.y} (count: {len(self.tiles)})")
         return color_map_matrix
 
     # NOTE: I am somewhat conflicted about whether
@@ -127,9 +129,9 @@ class TileParser:
         return mask
 
     def find_contours(self, img):
-        terrains = [ "forest", "lake", "plains",
+        terrains_test = [ "forest", "lake", "plains",
                      "wasteland", "wheat_field", "mine" ]
-        terrains_test = [ "forest" ]
+        terrains = [ "forest" ]
         all_contours = []
         hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
         
@@ -138,7 +140,105 @@ class TileParser:
             kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5,5))
             mask = cv.morphologyEx(hsv_mask, cv.MORPH_OPEN, kernel)
             contours, _ = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+            cv.imshow("hsv mask", mask)
             for contour in contours:
                 all_contours.append(contour)
         
         return all_contours
+    
+    def test_score(self, img):
+        terrains = [ "forest", "lake", "plains",
+                     "wasteland", "wheat_field", "mine" ]
+       
+        terrain_mask_color = 40
+        gray_img = np.zeros([5, 5, 1], dtype=np.uint8)
+        for terrain in terrains:
+            hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+            hsv_mask = self.get_hsv_thresholds(hsv_img, terrain)
+            kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, [5,5])
+            mask = cv.morphologyEx(hsv_mask, cv.MORPH_OPEN, kernel)
+            #print(f"image size: {img.shape}")
+            for y in range(0, mask.shape[0], 100):
+                for x in range(0, mask.shape[1], 100):
+                    mask_tile = mask[y:y + 100, x:x + 100]
+                    color = mask_tile.mean(axis=0).mean(axis=0)
+                    x_scaled = self.numeric_scale(x, 100)
+                    y_scaled = self.numeric_scale(y, 100)
+                    if color > 0:
+                        gray_img[int(y_scaled), int(x_scaled)] = terrain_mask_color
+                        print(f"gray img: {gray_img}")
+                        print(y_scaled, x_scaled)
+                        for tile in self.tiles:
+                            if tile.x == x_scaled and tile.y == y_scaled and color > 0:
+                                tile.terrain = terrain
+            terrain_mask_color += 40
+                #if color > 0:
+                    #print(f"there is a {terrain_tar} on y:{int(y_scaled)}, x:{int(x_scaled)}")
+        # cv.imshow("mask", mask)
+        for tile in self.tiles:
+            print(f"tile at: y:{tile.y}, x:{tile.x}'s terrain is: {tile.terrain}")
+        print(f"final (gray): {gray_img}")
+        cv.imshow("final", gray_img)
+
+        next_id = 1
+        intensity = 40
+        for y in range(gray_img.shape[0]):
+            for x in range(gray_img.shape[1]):
+                if gray_img[y,x] == intensity:
+                    self.grassfire_algorithm(gray_img, (x,y), next_id, intensity)
+                    next_id += 1
+                    intensity += 40
+                else:
+                    print(f"Nope at {y},{x}")
+
+    # Scale a numeric value by 100
+    def numeric_scale(self, value, scalar):
+        # print(f"scaling value: {value} by scalar: {scalar}")
+
+        if value == 0:
+            return 0
+
+        ret = 0
+        if value > scalar:
+            ret = value / scalar
+        elif value < scalar:
+            ret = scalar / value
+        else:
+            ret = 1
+
+        return ret
+    
+    # def 
+
+    def grassfire_algorithm(self, img, coords, index, intensity):
+        x,y = coords
+        burn_queue = []
+
+        if img[y,x] == intensity:
+            burn_queue.append((y,x))
+        else:
+            print(f"coords does not match intensity.\n Mismatch at: y:{y}, x:{x} with intensity: {intensity}")
+
+        while len(burn_queue) > 0:
+            current = burn_queue.pop(0)
+            y,x = current
+
+            img[y,x] = index
+            if x + 1 < img.shape[1] and img[y, x+1] == intensity:
+                burn_queue.append((y, x + 1))
+            if y + 1 < img.shape[0] and img[y + 1, x] == intensity:
+                burn_queue.append((y + 1, x))
+            if x > 0 and img[y, x - 1] == intensity:
+                burn_queue.append((y, x - 1))
+            if y > 0 and img[y - 1, x] == intensity:
+                burn_queue.append((y - 1, x))
+        print(f"grassfire img: \n{img}")
+
+
+
+    def get_tile(self, y, x):
+        for tile in self.tiles:
+            if tile.y == y and tile.x == x:
+                return tile
+            else:
+                return None
