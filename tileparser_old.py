@@ -157,7 +157,6 @@ class TileParser:
             hsv_mask = self.get_hsv_thresholds(hsv_img, terrain)
             kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, [5,5])
             mask = cv.morphologyEx(hsv_mask, cv.MORPH_OPEN, kernel)
-            cv.imshow("hsv_mask | mask", np.hstack[hsv_mask, mask])
             #print(f"image size: {img.shape}")
             for y in range(0, mask.shape[0], 100):
                 for x in range(0, mask.shape[1], 100):
