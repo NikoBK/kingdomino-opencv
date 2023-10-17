@@ -156,7 +156,7 @@ class AutoKD:
 
         # Start intensity is 40 because 0 is black.
         intensity = 40
-        cv.imshow("grayscale img", gray_img)
+        # cv.imshow("grayscale img", gray_img)
 
         # Convert the dominate color matrix to HSV colorspace so we can threshold.
         hsv_img = cv.cvtColor(dom_col_matrix, cv.COLOR_BGR2HSV)
@@ -184,6 +184,8 @@ class AutoKD:
             # Increase intensity for each terrain type.
             intensity += 40
             
+        gray_img_scaled = self.image_resize(gray_img, height=500)
+        cv.imshow("grayscale image (terrains)", gray_img_scaled)
         next_id = 1
         intensity = 40
         for gy in range(gray_img.shape[0]):
@@ -192,6 +194,7 @@ class AutoKD:
                     self.grassfire_algorithm(gray_img, (gx, gy), next_id, intensity)
                     next_id += 1
                     intensity += 40
+        cv.waitKey(0)
 
     def grassfire_algorithm(self, img, coords, index, intensity):
         x,y = coords
@@ -215,7 +218,6 @@ class AutoKD:
             if y > 0 and img[y - 1, x] == intensity:
                 burn_queue.append((y - 1, x))
         print(f"grassfire img: \n{img}")
-        cv.waitKey(0)
 
 
 main = AutoKD()
