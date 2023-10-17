@@ -11,56 +11,52 @@ Authors:
 import numpy as np
 import cv2 as cv
 
-# NOTE: Feature extraction could be used and then look at more than HSV.
-
 class Tile:
     def __init__(self):
-        self.img = None
-        self.dominant = [0,0,0]
+        self.img = None # 100x100px image of the tile.
+        self.dominant_color = [0,0,0]
         self.x = 0
         self.y = 0
-        self.crowns = 0
 
 class AutoKD:
     def __init__(self):
+        # Enable this for outlines around properties.
+        self.show_contours = False
+        self.show_hsv_values = False
         self.tiles = []
         self.start()
-
+    
     def start(self):
-        path = "dat/cropped/1.jpg"
-        img = cv.imread(path)
-        
-        # Make sure the image actually exists.
-        if img is None:
-            print(f"[ERROR] Could not find image at: {path}")
-            return # Stop the script if we cannot load an image.
-        else:
-            self.find_dominant_colors(img)
-        
-    def find_dominant_colors(self, img):
-        # 5x5 Dominant Color Matrix containing BGR values.
-        dom_color_mat = np.zeros([5,5,3], dtype=np.uint8)
+        path = "../dat/cropped/1.jpg"
+        input_img = cv.imread(path) # Image of the board.
 
-        # Each tile on the loaded image is 100x100 pixels.
+        # Stop the script if we the path is invalid.
+        if input_img is None:
+            print(f"[ERROR] No image file found at: {path}")
+            return
+        else:
+            cv.imshow("input image", input_img)
+            self.dominant_colors(input_img)
+        
+    def dominant_colors(self, img):
+        # A 5x5 matrix holding the most dominant BGR color for each tile.
+        dom_col_matrix = np.zeros([5,5,3], dtype=np.uint8)
+
+        # The size of each tile on the board in px.
         tile_size = 100
 
-        # For loops that start at 0 and increase with 100
-        # each time out the x and y axis (always y first).
         for y in range(0, img.shape[0], tile_size):
             for x in range(0, img.shape[1], tile_size):
-                # Create a new tile for (y,x)
                 tile = Tile()
 
-                # Save the tile's position in the fullscale
-                # image in the tile class instance.
-                tile.x = int(x / 100)
-                tile.y = int(y / 100)
+                # Save the tile's position in the fullscale image.
+                tile.x = int(x * 0.01)
+                tile.y = int(y * 0.01)
 
-                # Save the 100x100 tile image sliced out from the fullscale
-                # image in the tile class instance.
-                tile.img = img[y:y + tile_size, x:x + tile_size,:]
-
-                # Sum up all the pixels in one variable.
+                # Cut out a 100x100px image from the board.
+                tile.img = img[y:y + 100, x:x + 100,:]
+                
+                # Get the dominant color (BRG)
                 pixels = np.float32(tile.img.reshape(-1, 3))
 
                 # Define the ranks of dominant pixels. 5 = top 5 most frequent pixels.
@@ -68,60 +64,36 @@ class AutoKD:
                 # colors from the image.
                 n_colors = 5
 
-                max_iterations = 200
-                precision = .1
-                attempts = 10
-                criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, max_iterations, precision)
+                # Look up OpenCV's documentation for kmeans for this part.
+                criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 200, .1)
                 flags = cv.KMEANS_RANDOM_CENTERS
-                _, labels, palette = cv.kmeans(pixels, n_colors, None, criteria, attempts, flags)
-                _, counts = np.unique(labels, return_counts = True)
+                _, labels, palette = cv.kmeans(pixels, n_colors, None, criteria, 10, flags)
+                _, counts = np.unique(labels, return_counts=True)
 
-                # The dominant color.
-                dominant = palette[np.argmax(counts)]
+                # The dominant color taken from the palette.
+                dominant_color = palette[np.argmax(counts)]
 
                 # Save the dominant color in the tile class instance.
-                tile.dominant = dominant
+                tile.dominant_color = dominant_color
 
-                # Fill the 5x5 color matrix with our dominant colors
-                # for each 100x100 tile.
-                dom_color_mat[tile.y, tile.x] = [
-                    dominant[0], # Blue
-                    dominant[1], # Green
-                    dominant[2]  # Red
-                ]
-                # Append each tile in the for loop to our tiles array from __init__()
+                print(f"dominate color: {dominant_color}")
+
+                # Append the tile to AutoKD's tiles array, and
+                # save the tile's domninant BGR color in the 
+                # dominant color matrix.
                 self.tiles.append(tile)
-                self.make_grayscale(dom_color_mat)
+                dom_col_matrix[tile.y, tile.x] = [
+                    tile.dominant_color[0],
+                    tile.dominant_color[1],
+                    tile.dominant_color[2]
+                ]
+        # Scale the color matrix from a 5x5px resolution to a 500x500px resolution (easier to look at)
+        col_matrix_scaled = self.image_resize(dom_col_matrix, height=500)
+        cv.imshow("dominant color matrix (scaled)", col_matrix_scaled)
+        self.make_grayscale(col_matrix_scaled)
 
-    # Get the HSV mask for a terrain with a preset lower and upper HSV thresholds.
-    def get_hsv_mask(self, img, terrain):
-        match terrain:
-            case "forest":
-                lower = np.array([30, 50, 0])
-                upper = np.array([75, 255, 125])
-            case "lake":
-                lower = np.array([95, 50, 50])
-                upper = np.array([120, 255, 255])
-            case "plains":
-                lower = np.array([30, 80, 80])
-                upper = np.array([95, 255, 255])
-            case "wasteland":
-                lower = np.array([0, 20, 80])
-                upper = np.array([70, 170, 150])
-            case "field":
-                lower = np.array([25, 120, 120])
-                upper = np.array([30, 255, 255])
-            case "mine":
-                 lower = np.array([0, 0, 0])
-                 upper = np.array([28, 180, 80])
-            case _:
-                lower = np.array([0, 0, 0])
-                upper = np.array([0, 0, 0])
-                print(f"Could not find terrain handler: {terrain}")
-        
-        mask = cv.inRange(img, lower, upper)
-        return mask
-    
+    # Code by 'thewaywewere' on StackOverflow:
+    # https://stackoverflow.com/questions/44650888/resize-an-image-without-distortion-opencv/44659589#44659589
     def image_resize(self, image, width = None, height = None, inter = cv.INTER_AREA):
         # Initialize the dimensions of the image to be resized and grab the image size.
         dim = None
@@ -144,35 +116,85 @@ class AutoKD:
         # Resize the image
         resized = cv.resize(image, dim, interpolation = inter)
         return resized
-    
-    # Make a grayscale image of the 5x5 dominant color matrix.
-    # ( We need this for the grassfire algorithm )
-    def make_grayscale(self, dom_matrix):
-        # Convert the dominant color matrix to HSV colorspace.
-        dom_mat_hsv = cv.cvtColor(dom_matrix, cv.COLOR_BGR2HSV)
 
-        # All connected morphs must have their own intensity.
-        # We increase it by 40 each time for convenience.
-        start_intensity = 40
-        dom_mat_gray = np.zeros([5, 5, 1], dtype=np.uint8)
-        terrains = [ "forest", "lake", "plains", "wasteland", "field", "mine"]
+    # HSV Thresholding (Hue/Saturation/Value)
+    def get_hsv_mask(self, img, terrain):
+        match terrain:
+            # TODO: Add spawn regions?
+            case "forest":
+                lower = np.array([30, 50, 0])
+                upper = np.array([75, 255, 125])
+            case "lake":
+                lower = np.array([95, 50, 50])
+                upper = np.array([120, 255, 255])
+            case "plains":
+                lower = np.array([30, 80, 80])
+                upper = np.array([95, 255, 255])
+            case "wasteland":
+                lower = np.array([0, 20, 80])
+                upper = np.array([70, 170, 150])
+            case "wheat_field":
+                lower = np.array([25, 120, 120])
+                upper = np.array([30, 255, 255])
+            case "mine":
+                 lower = np.array([0, 0, 0])
+                 upper = np.array([28, 180, 80])
+            case _:
+                lower = np.array([0, 0, 0])
+                upper = np.array([0, 0, 0])
+                print(f"Could not find terrain handler: {terrain}")
+        mask = cv.inRange(img, lower, upper)
+        return mask
 
-        # Run HSV masking for each terrain and add the mask to the 
-        # grayscale image so that we can run grassfire on all terrains.
+    # Make a grayscale 5x5 matrix later used for the grassfire algorithm.
+    # All properties have their own unique intensity.
+    def make_grayscale(self, dom_col_matrix):
+        # Construct an empty matrix for the grayscale image.
+        gray_img = np.zeros([5,5,1], dtype=np.uint8)
+
+        # All the terrain types we want to find.
+        terrains = [ "forest", "lake", "plains", "wasteland", "field", "mine" ]
+
+        # Start intensity is 40 because 0 is black.
+        intensity = 40
+        # cv.imshow("grayscale img", gray_img)
+
+        # Convert the dominate color matrix to HSV colorspace so we can threshold.
+        hsv_img = cv.cvtColor(dom_col_matrix, cv.COLOR_BGR2HSV)
+        tile_size = 100
+
+        # Iterate through all terrain types.
         for terrain in terrains:
-            mask = self.get_hsv_mask(dom_mat_hsv, terrain)
-            
-            # Iterate through all tiles in the HSV mask.
-            for y in range(0, mask.shape[0], 1):
-                for x in range(0, mask.shape[1], 1):
-                    # Color of tile(y,x).
-                    color = mask.mean(axis=0).mean(axis=0)
-                    # Check if tile(y,x) is white.
-                    if color > 0:
-                        dom_mat_gray[int(y), int(x)] = start_intensity
-            start_intensity += 40
+            # Get the mask (a binary b/w image) for each terrain type.
+            hsv_mask = self.get_hsv_mask(hsv_img, terrain)
 
-        cv.imshow("final", dom_mat_gray)
+            # Loop through every 100x100px on the mask image.
+            for y in range(0, hsv_mask.shape[0], tile_size):
+                for x in range(0, hsv_mask.shape[1], tile_size):
+                    # Define a tile within the hsv mask (tiles are 100x100px)
+                    tile_mask = hsv_mask[y:y + tile_size, x:x + tile_size]
+
+                    # Find the average color of each tile on the mask (it is either black or white)
+                    tile_mask_color = tile_mask.mean(axis=0).mean(axis=0)
+
+                    # If a tile is white it means the terrain is seen.
+                    if tile_mask_color > 0:
+                        # Insert all found terrain types into the grayscale image.
+                        gray_img[int(y * 0.01), int(x * 0.01)] = intensity
+
+            # Increase intensity for each terrain type.
+            intensity += 40
+            
+        gray_img_scaled = self.image_resize(gray_img, height=500)
+        cv.imshow("grayscale image (terrains)", gray_img_scaled)
+        next_id = 1
+        intensity = 40
+        for gy in range(gray_img.shape[0]):
+            for gx in range(gray_img.shape[1]):
+                if gray_img[gy, gx] == intensity:
+                    self.grassfire_algorithm(gray_img, (gx, gy), next_id, intensity)
+                    next_id += 1
+                    intensity += 40
         cv.waitKey(0)
 
     def grassfire_algorithm(self, img, coords, index, intensity):
@@ -197,5 +219,6 @@ class AutoKD:
             if y > 0 and img[y - 1, x] == intensity:
                 burn_queue.append((y - 1, x))
         print(f"grassfire img: \n{img}")
+
 
 main = AutoKD()
