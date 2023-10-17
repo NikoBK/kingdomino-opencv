@@ -10,6 +10,7 @@ Authors:
 """
 import numpy as np
 import cv2 as cv
+from debug import Debugger
 
 class Tile:
     def __init__(self):
@@ -20,22 +21,21 @@ class Tile:
 
 class AutoKD:
     def __init__(self):
-        # Enable this for outlines around properties.
-        self.show_contours = False
-        self.show_hsv_values = False
+        self.debugger = Debugger()
         self.tiles = []
+        self.input_img = None
         self.start()
     
     def start(self):
         path = "dat/cropped/1.jpg"
         input_img = cv.imread(path) # Image of the board.
+        self.input_img = input_img # Global reference
 
         # Stop the script if we the path is invalid.
         if input_img is None:
             print(f"[ERROR] No image file found at: {path}")
             return
         else:
-            cv.imshow("input image", input_img)
             self.dominant_colors(input_img)
         
     def dominant_colors(self, img):
@@ -89,7 +89,7 @@ class AutoKD:
                 ]
         # Scale the color matrix from a 5x5px resolution to a 500x500px resolution (easier to look at)
         col_matrix_scaled = self.image_resize(dom_col_matrix, height=500)
-        cv.imshow("dominant color matrix (scaled)", col_matrix_scaled)
+        # cv.imshow("dominant color matrix (scaled)", col_matrix_scaled)
         self.make_grayscale(col_matrix_scaled)
 
     # Code by 'thewaywewere' on StackOverflow:
@@ -133,7 +133,7 @@ class AutoKD:
             case "wasteland":
                 lower = np.array([0, 20, 80])
                 upper = np.array([70, 170, 150])
-            case "wheat_field":
+            case "field":
                 lower = np.array([25, 120, 120])
                 upper = np.array([30, 255, 255])
             case "mine":
@@ -186,7 +186,6 @@ class AutoKD:
             intensity += 40
             
         gray_img_scaled = self.image_resize(gray_img, height=500)
-        cv.imshow("grayscale image (terrains)", gray_img_scaled)
         next_id = 1
         intensity = 40
         for gy in range(gray_img.shape[0]):
@@ -195,6 +194,9 @@ class AutoKD:
                     self.grassfire_algorithm(gray_img, (gx, gy), next_id, intensity)
                     next_id += 1
                     intensity += 40
+        
+        color_matrix_scaled = self.image_resize(dom_col_matrix, height=500)
+        self.debugger.init(self.input_img, color_matrix_scaled, gray_img_scaled, hsv_img)
         cv.waitKey(0)
 
     def grassfire_algorithm(self, img, coords, index, intensity):
