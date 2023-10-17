@@ -27,7 +27,7 @@ class AutoKD:
         self.start()
     
     def start(self):
-        path = "../dat/cropped/1.jpg"
+        path = "dat/cropped/1.jpg"
         input_img = cv.imread(path) # Image of the board.
 
         # Stop the script if we the path is invalid.
