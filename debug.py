@@ -4,16 +4,45 @@ import random
 
 class Debugger:
     def __init__(self):
+        # USER-INTERFACE
         self.show_input = False
         self.show_contours = True
-        self.show_hsv_values = False
+        self.show_hsv_values = True
         self.show_gray_scale = False
+        # PROPERTIES
+        self.font = cv.FONT_HERSHEY_SIMPLEX
+        self.org = (50,50)
+        self.font_scale = 1
+        self.color = (255,0,0)
+        self.thickness = 2
 
     def init(self, input_img, dom_col_img, gray_img, hsv_img):
-        if self.show_input:
+        space = np.zeros([500, 150, 3], np.uint8)
+        if self.show_contours and self.show_hsv_values:
+            contour_img = input_img
+            contour_hsv_img = cv.cvtColor(contour_img, cv.COLOR_BGR2HSV)
+            all_contours = self.find_contours(contour_img, dom_col_img)
+            for i in range(len(all_contours)):
+                cv.drawContours(contour_img, all_contours, i, (random.randint(0, 112), 0, random.randint(112, 255)), 3)
+
+            for y in range(0, dom_col_img.shape[0], 100):
+                for x in range(0, dom_col_img.shape[1], 100):
+                    dom_color_tile = contour_hsv_img[y:y + 100, x:x + 100,:]
+                    print(f"hsv value at y:{int(y * 0.01)}, x:{int(x * 0.01)}: {dom_color_tile[25, 25]}")
+                    
+
+            cv.imshow("Contours | HSV Values", np.hstack([contour_img, space, input_img]))
+            self.wait_for_input()
+            return
+        elif self.show_input:
             self.display_input(input_img)
-        if self.show_contours:
-            self.find_contours(input_img, dom_col_img)
+        elif self.show_contours:
+            contour_img = input_img
+            all_contours = self.find_contours(contour_img, dom_col_img)
+            for i in range(len(all_contours)):
+                cv.drawContours(contour_img, all_contours, i, (random.randint(0, 112), 0, random.randint(112, 255)), 3)
+            cv.imshow("Contours", contour_img)
+            self.wait_for_input()
         if self.show_hsv_values:
             self.display_hsv_vals(hsv_img)
         if self.show_gray_scale:
@@ -65,7 +94,7 @@ class Debugger:
         return mask
 
     def find_contours(self, input_img, dom_col_img):
-        terrains = [ "forest", "field" ]
+        terrains = [ "forest" ]
         all_contours = []
         hsv_img = cv.cvtColor(dom_col_img, cv.COLOR_BGR2HSV)
         
@@ -77,6 +106,4 @@ class Debugger:
             for contour in contours:
                 all_contours.append(contour)
         
-        for i in range(len(all_contours)):
-            cv.drawContours(input_img, all_contours, i, (random.randint(0, 112), 0, random.randint(112, 255)), 3)
-        cv.imshow("Input Image (with contours)", input_img)
+        return all_contours
