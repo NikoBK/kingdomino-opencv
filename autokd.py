@@ -24,11 +24,14 @@ class AutoKD:
         self.debugger = Debugger()
         self.tiles = []
         self.input_img = None
+        self.contour_img = None
+        self.verbose = False
         self.start()
     
     def start(self):
-        path = "dat/cropped/1.jpg"
+        path = "dat/cropped/40.jpg"
         input_img = cv.imread(path) # Image of the board.
+        self.contour_img = cv.imread(path) # DEBUG ONLY
         self.input_img = input_img # Global reference
 
         # Stop the script if we the path is invalid.
@@ -55,7 +58,7 @@ class AutoKD:
 
                 # Cut out a 100x100px image from the board.
                 tile.img = img[y:y + 100, x:x + 100,:]
-                
+
                 # Get the dominant color (BRG)
                 pixels = np.float32(tile.img.reshape(-1, 3))
 
@@ -73,10 +76,21 @@ class AutoKD:
                 # The dominant color taken from the palette.
                 dominant_color = palette[np.argmax(counts)]
 
+                if self.verbose:
+                    if x == 200 and y == 200:
+                        indices = np.argsort(counts)[::-1]   
+                        freqs = np.cumsum(np.hstack([[0], counts[indices]/float(counts.sum())]))
+                        rows = np.int_(img.shape[0]*freqs)
+                        dom_patch = np.zeros(shape=img.shape, dtype=np.uint8)
+                        for i in range(len(rows) - 1):
+                            dom_patch[rows[i]:rows[i + 1], :, :] += np.uint8(palette[indices[i]])
+                        cv.imshow(f"dominant colors ({y},{x})", dom_patch)
+
                 # Save the dominant color in the tile class instance.
                 tile.dominant_color = dominant_color
 
-                print(f"dominate color: {dominant_color}")
+                if self.verbose:
+                    print(f"dominate color: {counts}")
 
                 # Append the tile to AutoKD's tiles array, and
                 # save the tile's domninant BGR color in the 
@@ -87,10 +101,7 @@ class AutoKD:
                     tile.dominant_color[1],
                     tile.dominant_color[2]
                 ]
-        # Scale the color matrix from a 5x5px resolution to a 500x500px resolution (easier to look at)
-        col_matrix_scaled = self.image_resize(dom_col_matrix, height=500)
-        # cv.imshow("dominant color matrix (scaled)", col_matrix_scaled)
-        self.make_grayscale(col_matrix_scaled)
+        self.make_grayscale(dom_col_matrix)
 
     # Code by 'thewaywewere' on StackOverflow:
     # https://stackoverflow.com/questions/44650888/resize-an-image-without-distortion-opencv/44659589#44659589
@@ -161,7 +172,7 @@ class AutoKD:
 
         # Convert the dominate color matrix to HSV colorspace so we can threshold.
         hsv_img = cv.cvtColor(dom_col_matrix, cv.COLOR_BGR2HSV)
-        tile_size = 100
+        tile_size = 1
 
         # Iterate through all terrain types.
         for terrain in terrains:
@@ -171,16 +182,9 @@ class AutoKD:
             # Loop through every 100x100px on the mask image.
             for y in range(0, hsv_mask.shape[0], tile_size):
                 for x in range(0, hsv_mask.shape[1], tile_size):
-                    # Define a tile within the hsv mask (tiles are 100x100px)
-                    tile_mask = hsv_mask[y:y + tile_size, x:x + tile_size]
-
-                    # Find the average color of each tile on the mask (it is either black or white)
-                    tile_mask_color = tile_mask.mean(axis=0).mean(axis=0)
-
-                    # If a tile is white it means the terrain is seen.
-                    if tile_mask_color > 0:
+                    if hsv_mask[y,x] > 0:
                         # Insert all found terrain types into the grayscale image.
-                        gray_img[int(y * 0.01), int(x * 0.01)] = intensity
+                        gray_img[int(y), int(x)] = intensity
 
             # Increase intensity for each terrain type.
             intensity += 40
@@ -195,8 +199,15 @@ class AutoKD:
                     next_id += 1
                     intensity += 40
         
+        # Scale the color matrix from a 5x5px resolution to a 500x500px resolution (easier to look at)
         color_matrix_scaled = self.image_resize(dom_col_matrix, height=500)
-        self.debugger.init(self.input_img, color_matrix_scaled, gray_img_scaled, hsv_img)
+        self.debugger.init(
+            self.input_img, 
+            self.contour_img, 
+            color_matrix_scaled, 
+            gray_img_scaled, 
+            hsv_img
+        )
         cv.waitKey(0)
 
     def grassfire_algorithm(self, img, coords, index, intensity):
@@ -220,7 +231,9 @@ class AutoKD:
                 burn_queue.append((y, x - 1))
             if y > 0 and img[y - 1, x] == intensity:
                 burn_queue.append((y - 1, x))
-        print(f"grassfire img: \n{img}")
+
+        if self.verbose:
+            print(f"grassfire img: \n{img}")
 
 
 main = AutoKD()
