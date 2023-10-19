@@ -27,6 +27,7 @@ class AutoKD:
         self.contour_img = None
         self.verbose = False
         self.debugger = False
+        self.total_score = 0
         self.start()
     
     def start(self):
@@ -236,17 +237,27 @@ class AutoKD:
 
         return img
     
+    # NOTE: We decided that single tiles with crowns yields points as 1 * (n crowns).
     def get_score(self, grass_res, last_id):
+        cv.imshow("input", self.input_img)
+        unique, counts = np.unique(grass_res, return_counts=True)
+        tile_size = 1
+        for i in range(0, len(counts)):
+            for y in range(0, grass_res.shape[0], tile_size):
+                for x in range(0, grass_res.shape[1], tile_size):
+                    if grass_res[y,x] > last_id:
+                        grass_res[y,x] = last_id + 1
+                    crown_count = self.find_crowns((y,x))
+            self.total_score += counts[i] * crown_count
 
-        # Set overflow intensities to a default value.
-        for y in range(0, grass_res.shape[0], 1):
-            for x in range(0, grass_res.shape[1], 1):
-                if grass_res[y,x] > last_id:
-                    total_indices = last_id + 1
-                    grass_res[y,x] = total_indices
+            if self.verbose:
+                print(f"There are {counts[i]} instances of {i + 1}")
 
-        print(f"Final grassfire matrix:\n {grass_res}")
+        print(f"This board had a total score of: {self.total_score}")
         cv.waitKey(0)
 
+    def find_crowns(self, coords):
+        return 1
 
+# Start the script.
 main = AutoKD()
