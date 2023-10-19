@@ -4,6 +4,9 @@ import random
 
 class Debugger:
     def __init__(self):
+        # LOGGING
+        self.verbose = False
+
         # USER-INTERFACE
         self.show_input = False
         self.show_contours = True
@@ -16,9 +19,6 @@ class Debugger:
         self.font_scale = 1
         self.color = (255,0,0)
         self.thickness = 2
-
-        # LOGGING
-        self.verbose = True
 
     # NOTE: **Contours**
     #    Only ever find contours for dom_col_img, and then draw contours on contour_img.

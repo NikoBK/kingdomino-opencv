@@ -26,10 +26,11 @@ class AutoKD:
         self.input_img = None
         self.contour_img = None
         self.verbose = False
+        self.debugger = False
         self.start()
     
     def start(self):
-        path = "dat/cropped/40.jpg"
+        path = "dat/cropped/1.jpg"
         input_img = cv.imread(path) # Image of the board.
         self.contour_img = cv.imread(path) # DEBUG ONLY
         self.input_img = input_img # Global reference
@@ -168,7 +169,6 @@ class AutoKD:
 
         # Start intensity is 40 because 0 is black.
         intensity = 40
-        # cv.imshow("grayscale img", gray_img)
 
         # Convert the dominate color matrix to HSV colorspace so we can threshold.
         hsv_img = cv.cvtColor(dom_col_matrix, cv.COLOR_BGR2HSV)
@@ -190,33 +190,35 @@ class AutoKD:
             intensity += 40
             
         gray_img_scaled = self.image_resize(gray_img, height=500)
+        grass_res = None
         next_id = 1
-        intensity = 40
-        for gy in range(gray_img.shape[0]):
-            for gx in range(gray_img.shape[1]):
-                if gray_img[gy, gx] == intensity:
-                    self.grassfire_algorithm(gray_img, (gx, gy), next_id, intensity)
-                    next_id += 1
-                    intensity += 40
+        cv.imshow("grayscale", gray_img_scaled)
+
+        for gf_intensity in range(40, 200, 40):
+            for gy in range(gray_img.shape[0]):
+                for gx in range(gray_img.shape[1]):
+                    if gray_img[gy, gx] == gf_intensity:
+                        grass_res = self.grassfire_algorithm(gray_img, (gx, gy), next_id, gf_intensity)
+                        next_id += 1
         
         # Scale the color matrix from a 5x5px resolution to a 500x500px resolution (easier to look at)
         color_matrix_scaled = self.image_resize(dom_col_matrix, height=500)
-        self.debugger.init(
-            self.input_img, 
-            self.contour_img, 
-            color_matrix_scaled, 
-            gray_img_scaled, 
-            hsv_img
-        )
-        cv.waitKey(0)
+        
+        if self.debugger:
+            self.debugger.init(
+                self.input_img, 
+                self.contour_img, 
+                color_matrix_scaled, 
+                gray_img_scaled, 
+                hsv_img
+            )
+        self.get_score(grass_res, next_id)
 
     def grassfire_algorithm(self, img, coords, index, intensity):
         x,y = coords
         burn_queue = []
         if img[y,x] == intensity:
             burn_queue.append((y,x))
-        else:
-            print(f"coords does not match intensity.\n Mismatch at: y:{y}, x:{x} with intensity: {intensity}")
 
         while len(burn_queue) > 0:
             current = burn_queue.pop(0)
@@ -232,8 +234,19 @@ class AutoKD:
             if y > 0 and img[y - 1, x] == intensity:
                 burn_queue.append((y - 1, x))
 
-        if self.verbose:
-            print(f"grassfire img: \n{img}")
+        return img
+    
+    def get_score(self, grass_res, last_id):
+
+        # Set overflow intensities to a default value.
+        for y in range(0, grass_res.shape[0], 1):
+            for x in range(0, grass_res.shape[1], 1):
+                if grass_res[y,x] > last_id:
+                    total_indices = last_id + 1
+                    grass_res[y,x] = total_indices
+
+        print(f"Final grassfire matrix:\n {grass_res}")
+        cv.waitKey(0)
 
 
 main = AutoKD()
