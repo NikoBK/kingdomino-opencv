@@ -38,11 +38,9 @@ class AutoKD:
         self.start()
     
     def start(self):
-        path = "dat/cropped/23.jpg"
+        path = "dat/cropped/52.jpg"
         # Crown errors: 18, 38
         # Tile HSV errors: 14
-        # Images that crash: 23, 24
-        # Last image tested on this version: 24.jpg
 
         input_img = cv.imread(path) # Image of the board.
         self.contour_img = cv.imread(path) # DEBUG ONLY
@@ -273,7 +271,10 @@ class AutoKD:
                 for x in range(0, grass_res.shape[1], tile_size):
                     if grass_res[y,x] == unique[i]:
                         property.crown_count += self.find_crowns((y,x))
-                        property.tile_count = counts[property.id]
+                        if 0 in unique:
+                            property.tile_count = counts[property.id]
+                        else:
+                            property.tile_count = counts[property.id - 1]
             properties.append(property)
 
         for property in properties:
