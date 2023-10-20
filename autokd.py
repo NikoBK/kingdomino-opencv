@@ -31,8 +31,8 @@ class AutoKD:
         self.start()
     
     def start(self):
-        path = "dat/cropped/4.jpg"
-        # Corwn errors: 18, 38
+        path = "dat/cropped/16.jpg"
+        # Crown errors: 18, 38
 
         input_img = cv.imread(path) # Image of the board.
         self.contour_img = cv.imread(path) # DEBUG ONLY
@@ -195,7 +195,7 @@ class AutoKD:
         gray_img_scaled = self.image_resize(gray_img, height=500)
         grass_res = None
         next_id = 1
-        cv.imshow("grayscale", gray_img_scaled)
+        # cv.imshow("grayscale", gray_img_scaled)
 
         for gf_intensity in range(40, 200, 40):
             for gy in range(gray_img.shape[0]):
@@ -242,7 +242,7 @@ class AutoKD:
 
     # NOTE: We decided that single tiles with crowns yields points as 1 * (n crowns).
     def get_score(self, grass_res, last_id):
-        cv.imshow("input", self.input_img)
+        # cv.imshow("input", self.input_img)
         unique, counts = np.unique(grass_res, return_counts=True)
         tile_size = 1
         for i in range(0, len(counts)):
@@ -276,7 +276,7 @@ class AutoKD:
         assert template is not None, "file could not be read, check with os.path.exists()"
 
         # Only pixles above this threshold will pass
-        threshold = 0.47
+        threshold = 0.48
 
         # Amount of detected crowns, and their position 
         crown_count = 0
@@ -319,7 +319,7 @@ class AutoKD:
             # Rotate the template
             template = cv.rotate(template, cv.ROTATE_90_CLOCKWISE)
 
-        print(f'tile y{y+1}, x:{x+1}  has crown: {crown_count}')
+        # print(f'tile y{y+1}, x:{x+1}  has crown: {crown_count}')
         # Display input image with red squares around crowns.
         cv.imshow("input img", self.input_img)
 
