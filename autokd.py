@@ -31,7 +31,7 @@ class AutoKD:
         self.start()
     
     def start(self):
-        path = "dat/cropped/16.jpg"
+        path = "dat/cropped/1.jpg"
         # Crown errors: 18, 38
 
         input_img = cv.imread(path) # Image of the board.
@@ -195,7 +195,7 @@ class AutoKD:
         gray_img_scaled = self.image_resize(gray_img, height=500)
         grass_res = None
         next_id = 1
-        # cv.imshow("grayscale", gray_img_scaled)
+        cv.imshow("grayscale", gray_img_scaled)
 
         for gf_intensity in range(40, 200, 40):
             for gy in range(gray_img.shape[0]):
@@ -204,6 +204,12 @@ class AutoKD:
                         grass_res = self.grassfire_algorithm(gray_img, (gx, gy), next_id, gf_intensity)
                         next_id += 1
         
+        # Change unburned values such as 200 to one above the last burned id.
+        for y in range(0, grass_res.shape[0], 1):
+            for x in range(0, grass_res.shape[1], 1):
+                if grass_res[y,x] > next_id:
+                    grass_res[y,x] = next_id
+
         # Scale the color matrix from a 5x5px resolution to a 500x500px resolution (easier to look at)
         color_matrix_scaled = self.image_resize(dom_col_matrix, height=500)
         
@@ -239,24 +245,18 @@ class AutoKD:
 
         return img
     
-
     # NOTE: We decided that single tiles with crowns yields points as 1 * (n crowns).
     def get_score(self, grass_res, last_id):
-        # cv.imshow("input", self.input_img)
         unique, counts = np.unique(grass_res, return_counts=True)
         tile_size = 1
-        for i in range(0, len(counts)):
-            for y in range(0, grass_res.shape[0], tile_size):
-                for x in range(0, grass_res.shape[1], tile_size):
-                    if grass_res[y,x] > last_id:
-                        grass_res[y,x] = last_id + 1
-                    crown_count = self.find_crowns((y,x))
-            self.total_score += counts[i] * crown_count
-
-            if self.verbose:
-                print(f"There are {counts[i]} instances of {i + 1}")
-
-        print(f"This board had a total score of: {self.total_score}")
+        for y in range(0, grass_res.shape[0], tile_size):
+            for x in range(0, grass_res.shape[1], tile_size):
+                crown_count = self.find_crowns((y,x))
+                tiles_count = counts[grass_res[y,x] - 1]
+                if crown_count > 0:
+                    score = tiles_count * crown_count
+                    self.total_score += score
+        print(f"the final score is: {self.total_score}")
         cv.waitKey(0)
 
     def find_crowns(self, coords):
