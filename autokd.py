@@ -30,6 +30,7 @@ class AutoKD:
         self.debugger = Debugger()
         self.tiles = []
         self.input_img = None
+        self.gray_img = None
         self.contour_img = None
         self.verbose = False
         self.debugger = False
@@ -37,8 +38,11 @@ class AutoKD:
         self.start()
     
     def start(self):
-        path = "dat/cropped/9.jpg"
+        path = "dat/cropped/23.jpg"
         # Crown errors: 18, 38
+        # Tile HSV errors: 14
+        # Images that crash: 23, 24
+        # Last image tested on this version: 24.jpg
 
         input_img = cv.imread(path) # Image of the board.
         self.contour_img = cv.imread(path) # DEBUG ONLY
@@ -198,23 +202,18 @@ class AutoKD:
             # Increase intensity for each terrain type.
             intensity += 40
             
-        gray_img_scaled = self.image_resize(gray_img, height=500)
+        self.gray_img = self.image_resize(gray_img, height=500)
         grass_res = None
         next_id = 1
-        cv.imshow("grayscale", gray_img_scaled)
-        cv.waitKey(0)
+        # cv.imshow("grayscale", gray_img_scaled)
 
         for gf_intensity in range(40, 280, 40):
             for gy in range(gray_img.shape[0]):
                 for gx in range(gray_img.shape[1]):
-                    print(f"setting intensity for ({gy}, {gx}) to: {gf_intensity}")
                     if gray_img[gy, gx] == gf_intensity:
                         grass_res = self.grassfire_algorithm(gray_img, (gx, gy), next_id, gf_intensity)
-                        print(grass_res)
                         next_id += 1
         
-        # print(grass_res)
-
         # Change unburned values such as 200 to one above the last burned id.
         for y in range(0, grass_res.shape[0], 1):
             for x in range(0, grass_res.shape[1], 1):
@@ -229,7 +228,7 @@ class AutoKD:
                 self.input_img, 
                 self.contour_img, 
                 color_matrix_scaled, 
-                gray_img_scaled, 
+                self.gray_img, 
                 hsv_img
             )
         self.get_score(grass_res)
@@ -245,7 +244,6 @@ class AutoKD:
             y,x = current
 
             img[y,x] = index
-            print(f"({y},{x}) set to {index}")
             if x + 1 < img.shape[1] and img[y, x+1] == intensity:
                 burn_queue.append((y, x + 1))
             if y + 1 < img.shape[0] and img[y + 1, x] == intensity:
@@ -259,7 +257,12 @@ class AutoKD:
 
     # NOTE: We decided that single tiles with crowns yields points as 1 * (n crowns).
     def get_score(self, grass_res):
+        verbose = True
+
         unique, counts = np.unique(grass_res, return_counts=True)
+        if verbose:
+            print(f"unique: {unique}")
+            print(f"counts: {counts}")
         tile_size = 1
         properties = []
 
@@ -341,6 +344,7 @@ class AutoKD:
         # print(f'tile y{y+1}, x:{x+1}  has crown: {crown_count}')
         # Display input image with red squares around crowns.
         cv.imshow("input img", self.input_img)
+        cv.imshow("gray img", self.gray_img)
 
         return crown_count
 
