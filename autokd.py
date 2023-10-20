@@ -31,8 +31,8 @@ class AutoKD:
         self.start()
     
     def start(self):
-        path = "dat/cropped/69.jpg"
-        # Corwn errors: 2
+        path = "dat/cropped/4.jpg"
+        # Corwn errors: 18, 38
 
         input_img = cv.imread(path) # Image of the board.
         self.contour_img = cv.imread(path) # DEBUG ONLY
@@ -271,15 +271,17 @@ class AutoKD:
         assert tile_img is not None, "file could not be read, check with os.path.exists()"
 
         #Load crown template as gray scale 
-        template = cv.imread('dat/templates/crown.png', cv.IMREAD_GRAYSCALE)
+        template = cv.imread('dat/templates/crown2.png',cv.IMREAD_GRAYSCALE)
+        templateBlur = cv.blur(template,(1,1))
         assert template is not None, "file could not be read, check with os.path.exists()"
 
         # Only pixles above this threshold will pass
-        threshold = 0.70
+        threshold = 0.47
 
         # Amount of detected crowns, and their position 
         crown_count = 0
-        
+
+        # 
         dots = np.zeros(img_gray.shape)
 
         # Rotate the template 3 times, to ensure all crowns are captured.
@@ -306,8 +308,8 @@ class AutoKD:
                     if dots[py,px] == 255:
 
                         # Delete all other neighboring dots.                
-                        for ppy in range(20):
-                            for ppx in range(20):
+                        for ppy in range(h):
+                            for ppx in range(w):
                                 dots[py+ppy-5,px+ppx-5] = 0
 
                         # Add 1 to crown numbers, and draw red square around crown
