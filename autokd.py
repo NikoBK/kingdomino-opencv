@@ -31,7 +31,9 @@ class AutoKD:
         self.start()
     
     def start(self):
-        path = "dat/cropped/1.jpg"
+        path = "dat/cropped/69.jpg"
+        # Corwn errors: 2
+
         input_img = cv.imread(path) # Image of the board.
         self.contour_img = cv.imread(path) # DEBUG ONLY
         self.input_img = input_img # Global reference
@@ -237,6 +239,7 @@ class AutoKD:
 
         return img
     
+
     # NOTE: We decided that single tiles with crowns yields points as 1 * (n crowns).
     def get_score(self, grass_res, last_id):
         cv.imshow("input", self.input_img)
@@ -257,7 +260,68 @@ class AutoKD:
         cv.waitKey(0)
 
     def find_crowns(self, coords):
-        return 1
+        # NOTE: Works best with transparent templates.  
+        y,x = coords
+
+        # Finde the targeted tile
+        tile_img = self.input_img[y*100:y*100 + 100, x*100:x*100 + 100,:]        
+        
+        #Convert input image to gray scale
+        img_gray = cv.cvtColor(tile_img, cv.COLOR_BGR2GRAY)
+        assert tile_img is not None, "file could not be read, check with os.path.exists()"
+
+        #Load crown template as gray scale 
+        template = cv.imread('dat/templates/crown.png', cv.IMREAD_GRAYSCALE)
+        assert template is not None, "file could not be read, check with os.path.exists()"
+
+        # Only pixles above this threshold will pass
+        threshold = 0.70
+
+        # Amount of detected crowns, and their position 
+        crown_count = 0
+        
+        dots = np.zeros(img_gray.shape)
+
+        # Rotate the template 3 times, to ensure all crowns are captured.
+        for i in range(4): 
+
+            # Matching input with template 
+            res = cv.matchTemplate(img_gray,template,cv.TM_CCOEFF_NORMED)
+            
+            # Thresholding the resulting image, so only the crowns remain
+            loc = np.where( res >= threshold)
+
+            # The size of the template (Width and Hight)
+            w, h = template.shape[::-1]
+
+            # Transfer the pixels from loc to dots (We are able to edit dots, but not loc)
+            for pt in zip(*loc[::-1]):
+                dots[pt[1],pt[0]] = 255
+
+            # Loop over each pixel in dots
+            for py in range(dots.shape[0]):
+                for px in range(dots.shape[1]):
+
+                    # Detect pixels 
+                    if dots[py,px] == 255:
+
+                        # Delete all other neighboring dots.                
+                        for ppy in range(20):
+                            for ppx in range(20):
+                                dots[py+ppy-5,px+ppx-5] = 0
+
+                        # Add 1 to crown numbers, and draw red square around crown
+                        crown_count += 1
+                        cv.rectangle(self.input_img, (px+100*x, py+100*y), (px + w+100*x, py + h+100*y), (0,0,255), 2)
+               
+            # Rotate the template
+            template = cv.rotate(template, cv.ROTATE_90_CLOCKWISE)
+
+        print(f'tile y{y+1}, x:{x+1}  has crown: {crown_count}')
+        # Display input image with red squares around crowns.
+        cv.imshow("input img", self.input_img)
+
+        return crown_count
 
 # Start the script.
 main = AutoKD()
