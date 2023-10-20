@@ -19,6 +19,12 @@ class Tile:
         self.x = 0
         self.y = 0
 
+class Property:
+    def __init__(self):
+        self.id = 0
+        self.tile_count = 0
+        self.crown_count = 0
+
 class AutoKD:
     def __init__(self):
         self.debugger = Debugger()
@@ -31,7 +37,7 @@ class AutoKD:
         self.start()
     
     def start(self):
-        path = "dat/cropped/1.jpg"
+        path = "dat/cropped/9.jpg"
         # Crown errors: 18, 38
 
         input_img = cv.imread(path) # Image of the board.
@@ -196,14 +202,19 @@ class AutoKD:
         grass_res = None
         next_id = 1
         cv.imshow("grayscale", gray_img_scaled)
+        cv.waitKey(0)
 
-        for gf_intensity in range(40, 200, 40):
+        for gf_intensity in range(40, 280, 40):
             for gy in range(gray_img.shape[0]):
                 for gx in range(gray_img.shape[1]):
+                    print(f"setting intensity for ({gy}, {gx}) to: {gf_intensity}")
                     if gray_img[gy, gx] == gf_intensity:
                         grass_res = self.grassfire_algorithm(gray_img, (gx, gy), next_id, gf_intensity)
+                        print(grass_res)
                         next_id += 1
         
+        # print(grass_res)
+
         # Change unburned values such as 200 to one above the last burned id.
         for y in range(0, grass_res.shape[0], 1):
             for x in range(0, grass_res.shape[1], 1):
@@ -221,7 +232,7 @@ class AutoKD:
                 gray_img_scaled, 
                 hsv_img
             )
-        self.get_score(grass_res, next_id)
+        self.get_score(grass_res)
 
     def grassfire_algorithm(self, img, coords, index, intensity):
         x,y = coords
@@ -234,6 +245,7 @@ class AutoKD:
             y,x = current
 
             img[y,x] = index
+            print(f"({y},{x}) set to {index}")
             if x + 1 < img.shape[1] and img[y, x+1] == intensity:
                 burn_queue.append((y, x + 1))
             if y + 1 < img.shape[0] and img[y + 1, x] == intensity:
@@ -244,19 +256,26 @@ class AutoKD:
                 burn_queue.append((y - 1, x))
 
         return img
-    
+
     # NOTE: We decided that single tiles with crowns yields points as 1 * (n crowns).
-    def get_score(self, grass_res, last_id):
+    def get_score(self, grass_res):
         unique, counts = np.unique(grass_res, return_counts=True)
         tile_size = 1
-        for y in range(0, grass_res.shape[0], tile_size):
-            for x in range(0, grass_res.shape[1], tile_size):
-                crown_count = self.find_crowns((y,x))
-                tiles_count = counts[grass_res[y,x] - 1]
-                if crown_count > 0:
-                    score = tiles_count * crown_count
-                    self.total_score += score
-        print(f"the final score is: {self.total_score}")
+        properties = []
+
+        for i in range(0, len(unique)):
+            property = Property()
+            property.id = unique[i]
+            for y in range(0, grass_res.shape[0], tile_size):
+                for x in range(0, grass_res.shape[1], tile_size):
+                    if grass_res[y,x] == unique[i]:
+                        property.crown_count += self.find_crowns((y,x))
+                        property.tile_count = counts[property.id]
+            properties.append(property)
+
+        for property in properties:
+            self.total_score += property.crown_count * property.tile_count
+        print(f"total score is: {self.total_score}")
         cv.waitKey(0)
 
     def find_crowns(self, coords):
