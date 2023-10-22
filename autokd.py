@@ -38,7 +38,7 @@ class AutoKD:
         self.start()
     
     def start(self):
-        path = "dat/cropped/52.jpg"
+        path = "dat/cropped/15.jpg"
         # Crown errors: 18, 38
         # Tile HSV errors: 14
 
@@ -176,7 +176,7 @@ class AutoKD:
         gray_img = np.zeros([5,5,1], dtype=np.uint8)
 
         # All the terrain types we want to find.
-        terrains = [ "forest", "lake", "plains", "wasteland", "field", "mine" ]
+        terrains = [ "forest", "lake", "plains", "wasteland", "field", "mine"]
 
         # Start intensity is 40 because 0 is black.
         intensity = 40
@@ -201,26 +201,27 @@ class AutoKD:
             intensity += 40
             
         self.gray_img = self.image_resize(gray_img, height=500)
-        grass_res = None
         next_id = 1
         # cv.imshow("grayscale", gray_img_scaled)
+
+        finalscore = 0
 
         for gf_intensity in range(40, 280, 40):
             for gy in range(gray_img.shape[0]):
                 for gx in range(gray_img.shape[1]):
                     if gray_img[gy, gx] == gf_intensity:
-                        grass_res = self.grassfire_algorithm(gray_img, (gx, gy), next_id, gf_intensity)
+                        
+                        # Run grassfire on tagted pixel, and find all conected tiles and their dots.
+                        blob_count,crown_count = self.grassfire_algorithm(gray_img, (gx, gy), next_id, gf_intensity)
+
+                        # Add points from this blob to the final score
+                        finalscore += blob_count*crown_count
                         next_id += 1
         
-        # Change unburned values such as 200 to one above the last burned id.
-        for y in range(0, grass_res.shape[0], 1):
-            for x in range(0, grass_res.shape[1], 1):
-                if grass_res[y,x] > next_id:
-                    grass_res[y,x] = next_id
-
         # Scale the color matrix from a 5x5px resolution to a 500x500px resolution (easier to look at)
         color_matrix_scaled = self.image_resize(dom_col_matrix, height=500)
         
+        # A deebugger function
         if self.debugger:
             self.debugger.init(
                 self.input_img, 
@@ -229,19 +230,35 @@ class AutoKD:
                 self.gray_img, 
                 hsv_img
             )
-        self.get_score(grass_res)
+    
+        #Print the final score 
+        print(f'The final score is {finalscore}')
+
+        # Display input image with red squares around crowns.
+        cv.imshow("input img", self.input_img)
+
+        # Display gray scale image showcasing conected tiles. 
+        cv.imshow("gray img", self.gray_img)
+        cv.waitKey(0)
+
 
     def grassfire_algorithm(self, img, coords, index, intensity):
         x,y = coords
         burn_queue = []
-        if img[y,x] == intensity:
-            burn_queue.append((y,x))
+
+        # Ad the current tile to burn queue
+        burn_queue.append((y,x))
+        
+        blob_count = 0
+        crown_count = 0
+        visits = []
 
         while len(burn_queue) > 0:
             current = burn_queue.pop(0)
             y,x = current
-
+            
             img[y,x] = index
+
             if x + 1 < img.shape[1] and img[y, x+1] == intensity:
                 burn_queue.append((y, x + 1))
             if y + 1 < img.shape[0] and img[y + 1, x] == intensity:
@@ -250,37 +267,22 @@ class AutoKD:
                 burn_queue.append((y, x - 1))
             if y > 0 and img[y - 1, x] == intensity:
                 burn_queue.append((y - 1, x))
+            
+            # If the current tile has not been visted, add one to blob count, and check how many crowns are within the it.
+            if current in visits:
+                pass
+                #print("pass")
+            else:
+                blob_count += 1
+                crown_count += self.find_crowns((current))
 
-        return img
+            # Add the current tile to visted array.
+            visits.append(current)
 
-    # NOTE: We decided that single tiles with crowns yields points as 1 * (n crowns).
-    def get_score(self, grass_res):
-        verbose = True
+            #print(f'y:{y+1},x:{x+1}.  Blob count: {blob_count}. Crown count {crown_count}  id:{id}')
+        
+        return blob_count,crown_count
 
-        unique, counts = np.unique(grass_res, return_counts=True)
-        if verbose:
-            print(f"unique: {unique}")
-            print(f"counts: {counts}")
-        tile_size = 1
-        properties = []
-
-        for i in range(0, len(unique)):
-            property = Property()
-            property.id = unique[i]
-            for y in range(0, grass_res.shape[0], tile_size):
-                for x in range(0, grass_res.shape[1], tile_size):
-                    if grass_res[y,x] == unique[i]:
-                        property.crown_count += self.find_crowns((y,x))
-                        if 0 in unique:
-                            property.tile_count = counts[property.id]
-                        else:
-                            property.tile_count = counts[property.id - 1]
-            properties.append(property)
-
-        for property in properties:
-            self.total_score += property.crown_count * property.tile_count
-        print(f"total score is: {self.total_score}")
-        cv.waitKey(0)
 
     def find_crowns(self, coords):
         # NOTE: Works best with transparent templates.  
@@ -295,6 +297,7 @@ class AutoKD:
 
         #Load crown template as gray scale 
         template = cv.imread('dat/templates/crown2.png',cv.IMREAD_GRAYSCALE)
+
         templateBlur = cv.blur(template,(1,1))
         assert template is not None, "file could not be read, check with os.path.exists()"
 
@@ -304,7 +307,7 @@ class AutoKD:
         # Amount of detected crowns, and their position 
         crown_count = 0
 
-        # 
+        # A black image
         dots = np.zeros(img_gray.shape)
 
         # Rotate the template 3 times, to ensure all crowns are captured.
@@ -343,10 +346,6 @@ class AutoKD:
             template = cv.rotate(template, cv.ROTATE_90_CLOCKWISE)
 
         # print(f'tile y{y+1}, x:{x+1}  has crown: {crown_count}')
-        # Display input image with red squares around crowns.
-        cv.imshow("input img", self.input_img)
-        cv.imshow("gray img", self.gray_img)
-
         return crown_count
 
 # Start the script.
