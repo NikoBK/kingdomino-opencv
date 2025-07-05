@@ -3,7 +3,7 @@ This project was a mini-project for the computer vision course at Aalborg Univer
 and score different board layouts for the board game 'Kingdomino'.
 
 # Authors
-This project was made by Gustav Bay Baastrup and Nikolaj Bjoernager Krebs.
+This project was made by Gustav Bay Baastrup and Nikolaj Bjoernager.
 
 # Run the System
 Run the `autokd.py` script.
